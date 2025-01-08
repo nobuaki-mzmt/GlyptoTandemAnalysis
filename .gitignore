@@ -3,3 +3,7 @@
 .RData
 .Ruserdata
 old
+.feather
+*.feather
+*.h5
+*.mp4
