@@ -7,3 +7,5 @@ old
 *.feather
 *.h5
 *.mp4
+analysis/.RDataTmp1
+*.rda
