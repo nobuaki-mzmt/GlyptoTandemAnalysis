@@ -270,78 +270,91 @@
 # tandem movement
 # ---------------------------------------------------------------------------- #
 {
-  load("data_fmt/df_bodylength.rda")
-  load("data_fmt/df_tandem_analysis.rda")
-  df_tandem_analysis <- df_tandem_analysis %>%
-    left_join(df_bodylength[,c("video","tbl")], by = "video") %>%  
-    mutate(
-      dis = dis / tbl
-    ) %>%
-    select(-tbl) 
-  
-  df_tandem_analysis <- df_tandem_analysis %>%
-    mutate(
-      status = case_when(
-        dis > 2 ~ "sep",  
-        dis <= 2 & ang_ftom < 0 & ang_mtof > 0 ~ "fleader", 
-        dis <= 2 & ang_ftom > 0 & ang_mtof < 0 ~ "mleader", 
-        dis <= 2 ~ "interact",
-        TRUE ~ NA_character_ 
+  # data prep
+  {
+    load("data_fmt/df_bodylength.rda")
+    load("data_fmt/df_tandem_analysis.rda")
+    df_tandem_analysis <- df_tandem_analysis %>%
+      left_join(df_bodylength[,c("video","tbl")], by = "video") %>%  
+      mutate(
+        dis = dis / tbl
+      ) %>%
+      select(-tbl) 
+    
+    # defining tandem running
+    df_tandem_analysis <- df_tandem_analysis %>%
+      mutate(
+        status = case_when(
+          dis > 2 ~ "sep",  
+          dis <= 2 & ang_ftom < 0 & ang_mtof > 0 ~ "fleader", 
+          dis <= 2 & ang_ftom > 0 & ang_mtof < 0 ~ "mleader", 
+          dis <= 2 ~ "interact",
+          TRUE ~ NA_character_ 
+        )
       )
-    )
+    
+    df_tandem_analysis$status <- factor(df_tandem_analysis$status)
+    df_tandem_analysis[df_tandem_analysis$species == "Gly_nak_asexual" &
+                         df_tandem_analysis$status == "mleader",]$status <- "fleader"
+    
+    df_proportions <- df_tandem_analysis %>%
+      group_by(species, video, status) %>%
+      tally() %>% ungroup() %>%
+      group_by(video) %>%
+      mutate(proportion = n / sum(n)) %>% 
+      ungroup()
+    
+    df_proportions$sep_proportion <- 
+      rep(df_proportions[df_proportions$status == "sep",]$proportion, 
+          rle(df_proportions$video)$length)
+    
+    df_proportions$status <- factor(df_proportions$status, levels = c("interact", "fleader", "mleader", "sep"))
+    df_proportions$species <- str_replace(df_proportions$species, "_fus", "_1fus")
+    df_proportions$species <- str_replace(df_proportions$species, "_sat", "_2sat")
+    df_proportions$species <- str_replace(df_proportions$species, "_nak_sexual", "_3nak")
+    df_proportions$species <- str_replace(df_proportions$species, "_nak_asexual", "_4nak")
+    df_proportions <- df_proportions %>%
+      arrange(species, sep_proportion) %>%
+      mutate(video = factor(video, levels = unique(video)))
+  }
   
-  df_tandem_analysis$status <- factor(df_tandem_analysis$status)
-  df_tandem_analysis[df_tandem_analysis$species == "Gly_nak_asexual" &
-                       df_tandem_analysis$status == "mleader",]$status <- "fleader"
+  # plot for each video
+  {
+    ggplot(df_proportions, aes(x = video, y = proportion, fill = status)) +
+      geom_bar(stat = "identity", position = "stack", linewidth = .1, color = NA) +
+      scale_fill_viridis(discrete = TRUE) +
+      theme_classic() + 
+      theme(axis.title.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            legend.position = "top") +
+      scale_y_continuous(breaks = c(0, 0.5, 1), labels = c("0", "0.5", "1")) +
+      labs(x = "", y = "Proportion")
+    
+    ggsave("output/tandem_prop_pair.pdf", width = 5, height = 2)
+  }
   
+  # data prep 2
+  {
+    df_wide <- df_proportions %>%
+      select(species, video, status, proportion) %>%
+      spread(key = status, value = proportion, fill = 0)
+    
+    df_wide$tandem <- df_wide$fleader + df_wide$mleader
+    
+    ggplot(df_wide, aes(x = fleader, y = mleader, col=species)) +
+      geom_point(alpha = .75) +
+      scale_color_viridis(discrete = T) + 
+      coord_cartesian(xlim = c(0, .5), ylim = c(0, .5)) +
+      theme_classic() +
+      theme(aspect.ratio = 1) +
+      labs(x = "Prop of female leader", y = "Prop of male leader")
+    ggsave("output/tandem_proportion.pdf")
+  }
   
-  df_proportions <- df_tandem_analysis %>%
-    group_by(species, video, status) %>%
-    tally() %>% 
-    ungroup() %>%
-    group_by(video) %>%
-    mutate(proportion = n / sum(n)) %>% 
-    ungroup()
-  
-  df_proportions$sep_proportion <- 
-    rep(df_proportions[df_proportions$status == "sep",]$proportion, 
-        rle(df_proportions$video)$length)
-  
-  df_proportions2 <- df_proportions
-  levels(df_proportions2$status) <- c("interact", "fleader", "mleader", "sep")
-  df_proportions2$species <- str_replace(df_proportions2$species, "_fus", "_1fus")
-  df_proportions2$species <- str_replace(df_proportions2$species, "_sat", "_2sat")
-  df_proportions2$species <- str_replace(df_proportions2$species, "_nak_sexual", "_3nak")
-  df_proportions2$species <- str_replace(df_proportions2$species, "_nak_asexual", "_4nak")
-  df_proportions2 <- df_proportions2 %>%
-    arrange(species, sep_proportion) %>%
-    mutate(video = factor(video, levels = unique(video)))
-  
-  ggplot(df_proportions2, aes(x = video, y = proportion, fill = status)) +
-    geom_bar(stat = "identity", position = "stack", linewidth = .1, color = NA) +
-    scale_fill_viridis(discrete = TRUE) +
-    theme_classic() + 
-    theme(axis.title.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.ticks.x = element_blank(),
-          legend.position = "top") 
-  
-  df_wide <- df_proportions %>%
-    select(species, video, status, proportion) %>%
-    spread(key = status, value = proportion, fill = 0)
-  
-  df_wide$tandem <df_wide$tandem <df_wide$tandem <- df_wide$fleader + df_wide$mleader
-  
-  
-  df_wide$species <- factor(df_wide$species, level = species_list)
-  ggplot(df_wide, aes(x = fleader, y = mleader, col=species)) +
-    geom_point(alpha = .75) +
-    scale_color_viridis(discrete = T) + 
-    coord_cartesian(xlim = c(0, .5), ylim = c(0, .5)) +
-    theme_classic() +
-    theme(aspect.ratio = 1)
-  
-  minimum_tandem_sec <- 5
+  # tandem stability
+  # data prep
+  minimum_tandem_sec <- 2
   {
     load("data_fmt/df_bodylength.rda")
     load("data_fmt/df_tandem_analysis.rda")
@@ -461,9 +474,9 @@
             video = videos[i_v],
             sep_event = paste0(videos[i_v], "_", i),
             tandem = tandem_status[start-1],
-            time = (-24):run_length,
-            f_dis = (f_dis[(start-25):end]),
-            m_dis = (m_dis[(start-25):end]),
+            time = (-(analyze_FPS*minimum_tandem_sec-1)):run_length,
+            f_dis = (f_dis[(start-analyze_FPS*minimum_tandem_sec):end]),
+            m_dis = (m_dis[(start-analyze_FPS*minimum_tandem_sec):end]),
             species = df_temp$species[1]
           ))
         }
@@ -472,38 +485,62 @@
       }
       
     }
+    df_tandem[df_tandem$species == "Gly_nak_asexual" &
+                df_tandem$leader == "male", "leader"] <- "female"
+    
   }
   
+  # female leader
+  {
+    r<-survfit(Surv(f_dis) ~ species, type = "kaplan-meier", 
+               data = subset(df_tandem, leader == "female"))
+    p <- ggsurvplot(fit = r, data = df_tandem,
+               pval = F, pval.method = TRUE,
+               risk.table = F, conf.int = FALSE,
+               ncensor.plot = FALSE, size = 1,
+               xlim = c(0,180) )
+    p$plot + 
+      scale_color_viridis(discrete = T) +
+      scale_y_continuous(breaks = c(0,.5,1), labels = c("0", "0.5", "1")) +
+      scale_x_continuous(breaks = c(0, 80, 160), labels = c("0", "80", "160")) +
+      labs(x = "Leader moved ditance (mm)",
+           y = "Tandem probability") + 
+      theme_classic() +
+      theme(legend.position = c(0.8,0.8),
+            legend.title = element_blank())
+    
+    ggsave("output/female_leader_tandem_stability.pdf", width = 4, height= 3)
+    m <- coxme(Surv(f_dis) ~ species + (1|video), 
+               data = subset(df_tandem, leader == "female"))
+    Anova(m)
+  }  
   
-  df_tandem[df_tandem$species == "Gly_nak_asexual" &
-              df_tandem$leader == "male", "leader"] <- "female"
-  
-  r<-survfit(Surv(f_dis) ~ species, type = "kaplan-meier", 
-             data = subset(df_tandem, leader == "female"))
-  ggsurvplot(fit = r, data = df_tandem,
-             pval = F, pval.method = TRUE,
-             risk.table = F, conf.int = FALSE,
-             ncensor.plot = FALSE, size = 1,
-             xlab="Time (min)", ggtheme = theme_bw()  + 
-               theme(aspect.ratio = 0.75))
-  
-  m <- coxme(Surv(f_dis) ~ species + (1|video), 
-             data = subset(df_tandem, leader == "female"))
-  Anova(m)
-  
-  
-  r<-survfit(Surv(m_dis) ~ species, type = "kaplan-meier", 
-             data = subset(df_tandem, leader == "male"))
-  ggsurvplot(fit = r, data = df_tandem,
-             pval = F, pval.method = TRUE,
-             risk.table = F, conf.int = FALSE,
-             ncensor.plot = FALSE, size = 1,
-             xlab="Time (min)", ggtheme = theme_bw()  + 
-               theme(aspect.ratio = 0.75))
-  
-  m <- coxme(Surv(m_dis) ~ species + (1|video), 
-             data = subset(df_tandem, leader == "male"))
-  Anova(m)
+  # male leader
+  {
+    r<-survfit(Surv(m_dis) ~ species, type = "kaplan-meier", 
+               data = subset(df_tandem, leader == "male"))
+    p <- ggsurvplot(fit = r, data = df_tandem,
+               pval = F, pval.method = TRUE,
+               risk.table = F, conf.int = FALSE,
+               ncensor.plot = FALSE, size = 1,
+               xlab="Time (min)", ggtheme = theme_bw()  + 
+                 theme(aspect.ratio = 0.75),
+               xlim=c(0,180))
+    p$plot + 
+      scale_color_viridis(discrete = T) +
+      scale_y_continuous(breaks = c(0,.5,1), labels = c("0", "0.5", "1")) +
+      scale_x_continuous(breaks = c(0, 80, 160), labels = c("0", "80", "160")) +
+      labs(x = "Leader moved ditance (mm)",
+           y = "Tandem probability") + 
+      theme_classic() +
+      theme(legend.position = c(0.8,0.8),
+            legend.title = element_blank())
+    ggsave("output/male_leader_tandem_stability.pdf", width = 4, height= 3)
+    
+    m <- coxme(Surv(m_dis) ~ species + (1|video), 
+               data = subset(df_tandem, leader == "male"))
+    Anova(m)
+  }
 }
 # ---------------------------------------------------------------------------- #
 
