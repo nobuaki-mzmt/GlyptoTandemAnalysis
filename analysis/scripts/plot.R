@@ -227,7 +227,7 @@
   # stat
   {
     df_temp <- subset(df_relative_normalized, relative2 == "female" & dis < 2)
-    df_temp <- df_temp[seq(1, nrow(df_angle), by = 10), ]
+    #df_temp <- df_temp[seq(1, nrow(df_angle), by = 10), ]
     
     angle_gly_fus <- circular(subset(df_temp, species =="Gly_fus")$angle)
     angle_gly_sat <- circular(subset(df_temp, species =="Gly_sat")$angle)
@@ -322,14 +322,15 @@
   {
     ggplot(df_proportions, aes(x = video, y = proportion, fill = status)) +
       geom_bar(stat = "identity", position = "stack", linewidth = .1, color = NA) +
-      scale_fill_viridis(discrete = TRUE) +
+      #scale_fill_viridis(discrete = TRUE, option = "G") +
+      scale_fill_manual(values = c( "gray50", "red2", "blue4","grey95")) + 
       theme_classic() + 
       theme(axis.title.x = element_blank(),
             axis.text.x = element_blank(),
             axis.ticks.x = element_blank(),
             legend.position = "top") +
       scale_y_continuous(breaks = c(0, 0.5, 1), labels = c("0", "0.5", "1")) +
-      labs(x = "", y = "Proportion")
+      labs(x = "", y = "Proportion of time")
     
     ggsave("output/tandem_prop_pair.pdf", width = 5, height = 2)
   }

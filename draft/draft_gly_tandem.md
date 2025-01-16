@@ -14,31 +14,31 @@ Onna-son, Okinawa, 904-0495 Japan
 **Abstract**
 
 Parthenogenesis and the loss of males have occurred repeatedly across
-diverse organisms. However, asexual reproduction is not usually
+diverse organisms. Asexually-reproducing lineages are not usually
 associated with social animals that exhibit biparental care because such
 care is inherently linked to the behavioral sequence of mate pairing and
-sexual reproduction. The male-less termite, *Glyptotermes nakajimai*,
-provides a rare opportunity to study how sexual reproduction can be lost
-in social animals with parental care. Here we demonstrate that
-modification of the mate-pairing process impeded the evolution of
-asexual lineages. Termite colonies are typically founded by a mating
-pair, with many species forming a tandem courtship pair while searching
-for a nest site. Our comparative analysis of tandem running in
-*Glyptotermes* termites revealed that two related species, *G. fuscus*
-and *G. satsumensis*, exhibited both female-leader and male-leader
-tandem runs, estimated to be the ancestral state in this genus. On the
-other hand, tandem running was rare and ephemeral in both sexual and
-asexual lineages of *G. nakajimai*. These results suggest that *G.
-nakajimai* employs an alternative colony foundation strategy, as further
-supported by their colony structures. Our study highlights the close
-link between the evolution of asexuality and behavioral preadaptation,
-contributing to our understanding of the evolution of complex
-phenotypes.
+sexual reproduction. The male-less lineages of the termite,
+*Glyptotermes nakajimai*, provides a rare opportunity to study how
+sexual reproduction can be lost in social animals with parental care.
+Here we demonstrate that modification of the mate-pairing process
+predated the evolution of asexual lineages. Termite colonies are
+typically founded by a mating pair, with many species forming a tandem
+courtship pair while searching for a nest site. Our comparative analysis
+of tandem running in *Glyptotermes* termites revealed that two related
+species, *G. fuscus* and *G. satsumensis*, exhibited both female-leader
+and male-leader tandem runs, estimated to be the ancestral state in this
+genus. On the other hand, tandem running was rare and ephemeral in both
+sexual and asexual lineages of *G. nakajimai*. These results suggest
+that *G. nakajimai* employs an alternative colony foundation strategy,
+as further supported by their colony structures. Our study highlights
+the tight link between the evolution of asexuality and behavioral
+preadaptation, contributing to our understanding of the evolution of
+complex phenotypes.
 
 **Keywords:** Asexual reproduction, Movement coordination, Parental
 care, Same-sex sexual behavior, Social insects
 
-**Memo for introduction**
+**Memo for** **introduction**
 
 There are two different potential behavioral preadaptations that enable
 the evolution of a male-less colony foundation in termites.
@@ -75,7 +75,7 @@ G. nakajimai asexual: JP2107 (210303 Cape Toi)
 ![](media/image2.png)
 
 > **Figure 2.** Tandem running behavior of each species. (A) Proportion
-> of time in each state during observation. Each bar indicates each
+> of time in each state during observation. Each bar represents one
 > pair. (B-C) Interspecific comparison of the traveled distance during
 > each tandem running event.
 
