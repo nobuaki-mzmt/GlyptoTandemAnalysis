@@ -201,7 +201,7 @@ interactions.
 > the female's heading direction in angles when the pair is within 2
 > body lengths. (C) Distributions of the distance between partners.
 
-<img src="media/image2.png" style="width:4.91736in;height:3.56667in" />
+<img src="media/image2.png" style="width:4.91457in;height:3.56667in" />
 
 > **Figure 2.** Tandem running behavior of each species. (A) Proportion
 > of time in each state during observation. Each bar represents one
