@@ -1,0 +1,218 @@
+---
+title: "R Notebook"
+output: html_document
+---
+
+This is data preparation so ignore it.
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+# Pylogenetic analysis
+
+{
+  require(phytools)
+  require(stringr)
+  
+  library(viridis)
+  
+}
+
+# ---------------------------------------------------------------------------- #
+# prep data
+# ---------------------------------------------------------------------------- #
+{
+  # tree data
+  {
+    #tree.file <- "data_raw/tree/run1_burn20_mcc_median.tree"
+    tree.file <- "data_raw/tree/run5_400M_burnin20_mcc_median.tree"
+    
+    tree <- read.nexus(tree.file)
+    labels <- tree$tip.label
+    labels <- str_replace(labels, "Cubi_tenu", "Cubitermes_tenuiceps")
+    labels <- str_replace(labels, "Tern_pall", "Ternicubitermes_pall")
+  }
+
+  # tandem data (remove some taxa without phylogeny information)
+  {
+    d_tandem <- read.csv("data_raw/tree/tandem_info_Mizumoto-etal-2022-PNAS.csv")
+    
+    d_tandem <- d_tandem[d_tandem$Species != "convulsionarius",]
+    d_tandem <- d_tandem[d_tandem$Genus != "Odontotermes" | (
+                           d_tandem$Species != "distans" &
+                           d_tandem$Species != "brunneus" &
+                           d_tandem$Species != "assmuthi")   ,]
+    d_tandem <- d_tandem[d_tandem$Genus != "Nasutitermes" | (
+        d_tandem$Species != "nigriceps" &
+        d_tandem$Species != "ephratae" &
+        d_tandem$Species != "costalis")   ,]
+    d_tandem <- d_tandem[d_tandem$Species != "dimorphus",]
+    d_tandem <- d_tandem[d_tandem$Species != "unicolor",]
+    d_tandem <- d_tandem[d_tandem$Species != "edentatus",]
+    d_tandem <- d_tandem[d_tandem$Species != "suspensus",]
+    d_tandem <- d_tandem[d_tandem$Species != "bequarerti",]
+    d_tandem <- d_tandem[d_tandem$Species != "macrocephalus",]
+    d_tandem <- d_tandem[d_tandem$Species != "wheeleri",]
+    d_tandem <- d_tandem[d_tandem$Species != "atlanticus",]
+  }
+
+  # matching data and tree
+  {
+    label_num_list <- numeric(length(d_tandem[,1]))
+    options(warn=2)
+    for(i_d in 1:length(d_tandem[,1])){
+      
+      genus <- d_tandem[i_d,]$Genus
+      species <- d_tandem[i_d,]$Species
+      
+      label_num <- which(str_detect(labels, genus))
+      if(length(label_num) > 1){
+        label_num <- which(str_detect(labels, genus) & str_detect(labels, species))
+        if(length(label_num) > 1){
+          print(paste(genus, species, "multiple tips exist.", "use first one."))
+          label_num <- label_num[1]
+        }
+      } else if(length(label_num) == 0){
+        label_num <- NA
+      }
+      
+      label_num_list[i_d] <- label_num
+    }
+    
+    d_tandem$label <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+    d_tandem$label_num <- label_num_list
+    d_tandem <- d_tandem[!is.na(d_tandem$label_num),]
+    
+    labels[d_tandem$label_num] <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+    tree$tip.label <- labels
+    
+    tree_dropped <- drop.tip(tree, labels[!(1:length(labels) %in% d_tandem$label_num)])
+    tandem_tree <- ladderize(tree_dropped, right = TRUE)
+    
+  }
+}
+# ---------------------------------------------------------------------------- #
+
+```
+
+## 1. easy ancestral state reconstruction (ACE)
+First, I just do ACE for tandem (1) or not (0).
+There could be two models, ER and ARD, where these two achieved very different conclusion.
+
+Here is the ER (this is very similar to Mizumoto et al 2022 PNAS reconstruction)
+```{r}
+  cols = viridis(3)
+
+  tandem <- d_tandem$Tandem
+  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+  tandem <- tandem[tandem_tree$tip.label]
+  
+  fitER <- ace(tandem, tandem_tree, model="ER",type="discrete")
+  
+  plotTree(tandem_tree,fsize=0.8,ftype="i")
+  nodelabels(node=1:tandem_tree$Nnode+Ntip(tandem_tree),
+             pie=fitER$lik.anc,piecol=cols,cex=0.5)
+  tiplabels(pie=to.matrix(tandem,sort(unique(tandem))),piecol=cols,cex=0.3)
+  
+```
+
+
+And this is the ARD
+```{r}
+  tandem <- d_tandem$Tandem
+  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+  tandem <- tandem[tandem_tree$tip.label]
+  
+  fitARD <- ace(tandem, tandem_tree, model="ARD",type="discrete")
+  
+  plotTree(tandem_tree,fsize=0.8,ftype="i")
+  nodelabels(node=1:tandem_tree$Nnode+Ntip(tandem_tree),
+             pie=fitARD$lik.anc,piecol=cols,cex=0.5)
+  tiplabels(pie=to.matrix(tandem,sort(unique(tandem))),piecol=cols,cex=0.3)
+  
+```
+
+ARD is better fit.
+```{r}
+  anova(fitER, fitARD)
+```
+
+I think this is because we have so many tips in Neoisoptera and all of them are with tandem. So, we need a very strong assumption that once tandem run has evolved, it will be never lost. This can be achived by putting the transition rate 0 with ARD, and thus tandem running evolved multiple times. However, I feel this is unrealistic. And need other models to think about tandem run of Neoisoptera is different from that in other groups.
+
+
+## 2. hidden Markov model
+
+I think about hidden markov model to consider that tandem running has two state (1 and 1'), R1 is flexible and can evolutionary lose tandem running, R2 is fixed and cannot evolutionary lose tandem running. I think this is similar to how sex role is fixed in the group. For example, in Neoisoptera, female leader role is well fixed due to the evolution of sex pheromones and it is difficult to lose tandem running. On the other hand, other groups (like Glyptotermes) have flexible sex roles and often lack sex pheromones. In this group, evolutionary loss of tandem can happen frequently. We can model this scenario with fitHRM() function.
+
+```{r, message=FALSE, warning=FALSE}
+  fitER <- fitMk(tandem_tree, tandem, model="ER", pi="fitzjohn")
+  fitARD <- fitMk(tandem_tree, tandem, model="ARD", pi="fitzjohn")
+
+  fithrmER2<-fitHRM(tandem_tree,tandem,model="ER", parallel=T, ncat=c(1,2), pi="fitzjohn")
+  fithrmARD2<-fitHRM(tandem_tree,tandem,model="ARD", parallel=T, ncat=c(1,2), pi="fitzjohn")
+```
+
+- fitER and fitARD are normal ER model
+- fithrmER2 and fithrmARD2 are hidden Markov model
+
+```{r}
+  fit_aov <- anova(fitER, fitARD, fithrmER2, fithrmARD2)
+```
+
+fithrmARD2 did a great job, but actually still fitARD is better.
+Note that fithrmARD2 looks like below.
+
+```{r}
+  plot(fithrmARD2)
+
+  anc_parity <- ancr(fithrmARD2,tips=TRUE)
+  plot(anc_parity,args.nodelabels=list(piecol=cols),
+       args.tiplabels=list(piecol=cols))
+  
+```
+
+As you can see, Neoisoptera is in a different state, where tandem running is fixed, while other groups have flexible tandem running. This suggest that tandem-nontandem transition occurs a lot in these groups (and thus we cannot determine the ancestral state well), which is actually intuitive and fits my impression.
+
+Note that I excluded Mastotermes darwiniensis as their tandem is in worker (and I do not call it tandem actually), and now I know that they do not tandem in dealates.
+However, additing darwiniensis does not change these results. If I add darwiniensis or add/remove a few of them, it will change which model is better fit (sometimes just ARD but sometimes hidden morkov).
+
+In addition, actually I want to reduce the df of fithrmARD2 model as I want to predetermine that 1' cannot be back to 1 (it is a bit too difficult to do calcurate this as this function/package do not support it). If we do this fithrmARD2 is the best model. However, I do not feel it makes sense to play around these tuning as the result looks change a lot by including/excluding some tips.
+
+
+## Think of leader roles
+
+In the above ACE, I treated tandem or not as two states. What if we do have four states (no tandem, both leader, female leader, and male leader)?
+
+
+```{r}
+
+  leader <- d_tandem$Leader
+  names(leader) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+  leader <- as.factor(leader)
+  
+  X <- to.matrix(leader, levels(leader))
+  labs <- row.names(X[apply(X, 1, sum) == 0,])
+  X[apply(X, 1, sum) == 0, 2:4] <- 1
+  
+  fit1 <- fitMk(tandem_tree, X, model="ARD", pi="fitzjohn")
+  fit2 <- fitMk(tandem_tree, X, model="ER", pi="fitzjohn")
+  fit3 <- fitMk(tandem_tree, X, model="SYM", pi="fitzjohn")
+
+  anova(fit1, fit2, fit3)
+  
+  ace1 <- ancr(fit3,tips=TRUE)
+  plot(ace1)
+  tips<-sapply(labs,function(x,y) which(y==x),y=tandem_tree$tip.label)
+  add.arrow(tandem_tree,tips,arrl=3,offset=2,lwd=2,
+            col=palette()[4])
+  
+  
+  
+```
+
+SYM model fit the best, and ACE is like the above.
+Some note
+
+- treated the species who does tandem but without leader information as a ambiguous tip (they may be both leader, female leader, or male leader; blue arrows).
+
+- This is a bit too complex model to do perform the hidden markov model. ARD has the same issue (only female leader evolve, they never change the state).
+
+
