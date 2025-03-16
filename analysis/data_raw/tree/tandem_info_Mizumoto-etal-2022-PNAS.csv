@@ -1,6 +1,6 @@
 ﻿Group,Genus,Species,Tandem,Leader,Leader2,source
-Basal,Zootermopsis,anguaticollis,1,female,female,Mizumoto-etal-2022
-Basal,Anacanthotermes,ocbraceus,0,0,0,Mizumoto-etal-2022
+Basal,Zootermopsis,angusticollis,1,female,female,Mizumoto-etal-2022
+Basal,Anacanthotermes,ochraceus,0,0,0,Mizumoto-etal-2022
 Basal,Anacanthotermes,macrocephalus,0,0,0,Mizumoto-etal-2022
 Basal,Hodotermes,mossambicus,1,male,male,Mizumoto-etal-2022
 Basal,Porotermes,adamsoni,1,NA,female,Mizumoto-etal-2022
@@ -12,7 +12,7 @@ Kalo,Cryptotermes,domesticus,0,0,0,Mizumoto-etal-2022
 Kalo,Cryptotermes,cynocephalus,1,NA,female,Mizumoto-etal-2022
 Kalo,Cryptotermes,dudleyi,1,both,both,Mizumoto-etal-2022
 Kalo,Incisitermes,minor,1,female,female,Mizumoto-etal-2022
-Kalo,Kalotermes,flavicolis,1,both,both,Mizumoto-etal-2022
+Kalo,Kalotermes,flavicollis,1,both,both,Mizumoto-etal-2022
 Kalo,Marginitermes,hubbardi,1,NA,female,Mizumoto-etal-2022
 Kalo,Neotermes,sugioi,0,0,0,Mizumoto-etal-2022
 Kalo,Paraneotermes,simplicicornis,1,both,both,Mizumoto-etal-2022

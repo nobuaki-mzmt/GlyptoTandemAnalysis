@@ -1,9 +1,16 @@
 # Pylogenetic analysis
 
 {
+  options(warn = 0)
+  
+  library(dplyr)
+  
   require(phytools)
   require(stringr)
+  
+  library(ggplot2)
   library(viridis)
+  library(scales)
 }
 
 # ---------------------------------------------------------------------------- #
@@ -19,11 +26,14 @@
     labels <- tree$tip.label
     labels <- str_replace(labels, "Cubi_tenu", "Cubitermes_tenuiceps")
     labels <- str_replace(labels, "Tern_pall", "Ternicubitermes_pall")
+    labels <- str_replace(labels, "Tern_pall", "Ternicubitermes_pall")
   }
 
   # tandem data (remove some taxa without phylogeny information)
   {
-    d_tandem <- read.csv("data_raw/tree/tandem_info_Mizumoto-etal-2022-PNAS.csv")
+    d_tandem <- read.csv("data_raw/tree/tandem_info_Mizumoto-etal-2022-PNAS.csv")[,1:6]
+    d_mate   <- read.csv("data_raw/tree/mating_system.csv")[,1:7]
+    d_tandem <- full_join(d_tandem, d_mate, by = c("Group", "Genus", "Species", "Tandem"))
     
     d_tandem <- d_tandem[d_tandem$Species != "convulsionarius",]
     d_tandem <- d_tandem[d_tandem$Genus != "Odontotermes" | (
@@ -78,6 +88,15 @@
     tandem_tree <- ladderize(tree_dropped, right = TRUE)
     
   }
+  
+  # get vector for ace
+  {
+    leader <- as.factor(d_tandem$Leader2)
+    incipient <- as.factor(d_tandem$Incipient)
+    mature <- as.factor(d_tandem$Mature)
+    
+    names(leader) = names(incipient) = names(mature) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+  }
 }
 # ---------------------------------------------------------------------------- #
 
@@ -85,453 +104,113 @@
 # plot / analysis
 # ---------------------------------------------------------------------------- #
 {
-  # 
+  # Ancestral state reconstruction of tandem (four state model)
+  save_plot = T
   {
-  tandem <- d_tandem$Tandem
-  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
+    fitARD <- fitMk(tandem_tree, leader, model="ARD", pi="fitzjohn")
+    fitER  <- fitMk(tandem_tree, leader, model="ER", pi="fitzjohn")
+    fitSYM <- fitMk(tandem_tree, leader, model="SYM", pi="fitzjohn")
   
-  
-  fitER <- fitMk(tandem_tree, tandem, model="ER", pi="fitzjohn")
-  fitARD <- fitMk(tandem_tree, tandem, model="ARD", pi="fitzjohn")
-
-  fithrmER1<-fitHRM(tandem_tree,tandem,model="ER", parallel=T, ncat=c(2,2), pi="fitzjohn")
-  fithrmARD1<-fitHRM(tandem_tree,tandem,model="ARD", parallel=T, ncat=c(2,2), pi="fitzjohn")
-  
-  fithrmER2<-fitHRM(tandem_tree,tandem,model="ER", parallel=T, ncat=c(1,2), pi="fitzjohn")
-  fithrmARD2<-fitHRM(tandem_tree,tandem,model="ARD", parallel=T, ncat=c(1,2), pi="fitzjohn")
-  
-  fit_aov <- anova(fitER, fitARD, fithrmER1, fithrmARD1, fithrmER2, fithrmARD2)
-  
-  cols = viridis(3)
-  anc_parity <- ancr(fithrmARD2,tips=TRUE)
-  plot(anc_parity,args.nodelabels=list(piecol=cols),
-       args.tiplabels=list(piecol=cols))
-  
-  plot(fithrmARD2)
-  
-  }
-  
-  
-  
-  {
-    leader <- d_tandem$Leader
-    names(leader) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-    leader <- as.factor(leader)
+    fithrmER1 <- fitHRM(tandem_tree, leader, model="ER", pi="fitzjohn",
+                       ncat=c(1,1,2,1), parallel=TRUE, ncores=20, niter=20)
     
-    X <- to.matrix(leader, levels(leader))
-    labs <- row.names(X[apply(X, 1, sum) == 0,])
-    X[apply(X, 1, sum) == 0, 2:4] <- 1
+    fithrmER2 <- fitHRM(tandem_tree, leader, model="ER", pi="fitzjohn",
+                        ncat=c(2,2,2,2), parallel=TRUE, ncores=20, niter=20)
     
-    fit1 <- fitMk(tandem_tree, X, model="ARD", pi="fitzjohn")
-    fit2 <- fitMk(tandem_tree, leader, model="ER", pi="fitzjohn")
-    fit3 <- fitMk(tandem_tree, X, model="SYM", pi="fitzjohn")
-  
-    anova(fit1, fit2, fit3)
+    anova(fitARD, fitER, fitSYM, fithrmER1, fithrmER2)
+      
+    ace1 <- ancr(fithrmER1, tips=TRUE)
     
-    ncores<-min(c(10,parallel::detectCores()))
+    leader_col   <- c("gray50", "#9370DB", "#D55E00", "#F63C00", "#009E73")
     
-    fithrmARD2<-fitHRM(tandem_tree, leader, model="ARD", pi="fitzjohn",
-                       ncat=c(1,1,2,1))
     
-    anova(fit1, fit2, fit3, fit4)
-    
-    ace1 <- ancr(fit3,tips=TRUE)
-    plot(ace1)
-    tips<-sapply(labs,function(x,y) which(y==x),y=tandem_tree$tip.label)
-    add.arrow(tandem_tree,tips,arrl=3,offset=2,lwd=2,
-              col=palette()[4])
+    plot(ace1, args.nodelabels=list(piecol=leader_col))
+    if(save_plot){
+      pdf("output/leader_ase.pdf", width=5, height=6)
+      plot(ace1, args.nodelabels=list(piecol=leader_col))
+      dev.off()
+    }
   }  
   
-  
+  # Ancestral state reconstruction of mate system
   {
-    options(warn=0)
-    leader <- d_tandem$Leader
-    names(leader) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-    leader <- as.factor(leader)
+    # incipient
+    valid_tips <- names(incipient[!is.na(incipient)])
+    pruned_tree <- drop.tip(tandem_tree, setdiff(tandem_tree$tip.label, valid_tips))
+    incipient_pruned <- incipient[valid_tips]
     
-    tandem_tree2 <- drop.tip(tandem_tree,  d_tandem$label[ is.na(d_tandem$Leader) ])
-    leader <- d_tandem$Leader[ !is.na(d_tandem$Leader) ]
-    names(leader) <- d_tandem$label[ !is.na(d_tandem$Leader) ]
-    leader <- as.factor(leader)
+    fitARD <- fitMk(pruned_tree, incipient_pruned, model="ARD", pi="fitzjohn")
+    fitER  <- fitMk(pruned_tree, incipient_pruned, model="ER" , pi="fitzjohn")
+    fitSYM <- fitMk(pruned_tree, incipient_pruned, model="SYM", pi="fitzjohn")
     
-    fit1 <- fitMk(tandem_tree2, leader, model="ARD", pi="fitzjohn")
-    fit2 <- fitMk(tandem_tree2, leader, model="ER", pi="fitzjohn")
-    fit3 <- fitMk(tandem_tree2, leader, model="SYM", pi="fitzjohn")
+    anova(fitARD, fitER, fitSYM)
     
-    fithrmER1<-fitHRM(tandem_tree2, leader, model="ER", pi="fitzjohn",
-                      ncat=c(1,1,2,1), parallel=TRUE, ncores=20, niter=20)
-    fithrmER2<-fitHRM(tandem_tree2, leader, model="ER", pi="fitzjohn",
-                       ncat=c(2,2,2,2), parallel=TRUE, ncores=20, niter=20)
+    ace1 <- ancr(fitER, tips=TRUE)
     
-    anova(fit1, fit2, fit3, fithrmER1, fithrmER2)
+    plot(ace1, args.nodelabels=list(piecol=viridis(3)))
     
-    plot(fithrmER1)
+    # mature
+    valid_tips <- names(mature[!is.na(mature)])
+    pruned_tree <- drop.tip(tandem_tree, setdiff(tandem_tree$tip.label, valid_tips))
+    mature_pruned <- mature[valid_tips]
     
-    ace1 <- ancr(fithrmER1,tips=TRUE)
-    plot(ace1)
-  }
-
-  {
-    options(warn=0)
-    leader <- d_tandem$Leader2
-    names(leader) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-    leader <- as.factor(leader)
+    fitARD <- fitMk(pruned_tree, mature_pruned, model="ARD", pi="fitzjohn")
+    fitER  <- fitMk(pruned_tree, mature_pruned, model="ER" , pi="fitzjohn")
+    fitSYM <- fitMk(pruned_tree, mature_pruned, model="SYM", pi="fitzjohn")
     
-    fit1 <- fitMk(tandem_tree, leader, model="ARD", pi="fitzjohn")
-    fit2 <- fitMk(tandem_tree, leader, model="ER", pi="fitzjohn")
-    fit3 <- fitMk(tandem_tree, leader, model="SYM", pi="fitzjohn")
+    anova(fitARD, fitER, fitSYM)
     
-    fithrmER1<-fitHRM(tandem_tree, leader, model="ER", pi="fitzjohn",
-                      ncat=c(1,1,2,1), parallel=TRUE, ncores=20, niter=20)
-    fithrmER2<-fitHRM(tandem_tree, leader, model="ER", pi="fitzjohn",
-                      ncat=c(2,2,2,2), parallel=TRUE, ncores=20, niter=20)
+    ace1 <- ancr(fitER, tips=TRUE)
     
-    fithrmSYM1<-fitHRM(tandem_tree, leader, model="SYM", pi="fitzjohn",
-                      ncat=c(1,1,2,1), parallel=TRUE, ncores=20, niter=20)
-    fithrmSYM2<-fitHRM(tandem_tree, leader, model="SYM", pi="fitzjohn",
-                      ncat=c(2,2,2,2), parallel=TRUE, ncores=20, niter=20)
+    plot(ace1, args.nodelabels=list(piecol=viridis(3)))
     
-    
-    anova(fit1, fit2, fit3, fithrmER1, fithrmER2, fithrmSYM1, fithrmSYM2)
-    
-    plot(fithrmER1)
-    
-    ace1 <- ancr(fithrmER1,tips=TRUE)
-    plot(ace1)
-  }
+  }  
   
-  
+  # plot tip labels
+  save_plot <- TRUE
   {
+    partheno <- as.factor(d_tandem$Parthenogenesis)
+    names(partheno) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
     
+    is_tip <- tandem_tree$edge[,2] <= length(tandem_tree$tip.label)
+    ordered_tips <- tandem_tree$edge[is_tip, 2]
+    ordered_tips_label <- tandem_tree$tip.label[ordered_tips]
+    ordered_leader    <- as.numeric(rev(leader[ordered_tips.label]))
+    ordered_incipient <- as.numeric(rev(incipient[ordered_tips.label]))
+    ordered_mature    <- as.numeric(rev(mature[ordered_tips.label]))
+    ordered_partheno  <- as.numeric(rev(partheno[ordered_tips.label]))
     
-    f_leader <- (leader == "female" | leader == "both")
-    names(f_leader) <- d_tandem$label[ !is.na(d_tandem$Leader) ]
-    m_leader <- (leader == "male" | leader == "both")
-    names(m_leader) <- d_tandem$label[ !is.na(d_tandem$Leader) ]
+    cols = viridis(4, end=0.5, alpha=0.5)
+    col.show <- alpha(c(cols, "white"), 0.5)
     
-    fit_fm <- fitPagel(tandem_tree2, f_leader, m_leader)
-    plot(fit_cor, lwd.by.rate=TRUE)
-    fit_f <- fitPagel(tandem_tree2, f_leader, m_leader, dep.var="x")
-    fit_m <- fitPagel(tandem_tree2, f_leader, m_leader, dep.var="y")
+    leader_col   <- c("gray50", "#9370DB", "#D55E00", "#009E73")
+    mate_col     <- viridis(3, direction = -1)
+    partheno_col <- c("#D72638", "#F49AC2", "#FFFFFF")  
+    data.tile <- c(matrix(c(leader_col[ordered_leader],  
+                            mate_col[ordered_incipient], 
+                            mate_col[ordered_mature],
+                            partheno_col[ordered_partheno]),
+                          4, byrow=T))
     
-    aic<-setNames(c(fit_fm$independent.AIC,
-                    fit_m$dependent.AIC,
-                    fit_f$dependent.AIC,
-                    fit_fm$dependent.AIC),
-                  c("independent","dependent m",
-                    "dependent f","dependent f&m"))
-    aic.w(aic)
+    show_col(data.tile, ncol = 4, labels =F)
     
-    
-    fitER <- fitMk(tandem_tree2, f_leader, model="ER", pi="fitzjohn")
-    fitARD <- fitMk(tandem_tree2, f_leader, model="ARD", pi="fitzjohn")
-    
-    fithrmER2<-fitHRM(tandem_tree2, f_leader,model="ER", parallel=T, ncat=c(1,2))
-    fithrmARD2<-fitHRM(tandem_tree2, f_leader,model="ARD", parallel=T, ncat=c(1,2))
-    
-    fit_aov <- anova(fitER, fitARD, fithrmER2, fithrmARD2)
-    
-    cols = viridis(3)
-    anc_parity <- ancr(fitARD,tips=TRUE)
-    plot(anc_parity,args.nodelabels=list(piecol=cols),
-         args.tiplabels=list(piecol=cols))
-    
-    plot(fithrmARD2)
-    
-    
-    
-    fitER <- fitMk(tandem_tree2, m_leader, model="ER", pi="fitzjohn")
-    fitARD <- fitMk(tandem_tree2, m_leader, model="ARD", pi="fitzjohn")
-    
-    fithrmER2<-fitHRM(tandem_tree2, m_leader,model="ER", parallel=T, ncat=c(1,2))
-    fithrmARD2<-fitHRM(tandem_tree2, m_leader,model="ARD", parallel=T, ncat=c(1,2))
-    
-    fit_aov <- anova(fitER, fitARD, fithrmER2, fithrmARD2)
-    
-    cols = viridis(3)
-    anc_parity <- ancr(fitARD,tips=TRUE)
-    plot(anc_parity,args.nodelabels=list(piecol=cols),
-         args.tiplabels=list(piecol=cols))
-    
-    plot(fithrmARD2)
-    
+    if(save_plot){
+      pdf("output/tip_lebel.pdf", width=5, height=6)
+      show_col(data.tile, ncol = 4, labels =F)
+      dev.off()
+    }
     
   }
   
-  
-  
-  
-  
-  #X["Glyptotermes_satsumensis",] <- c(0, 1-0.513776, 0.513776)
-  #X["Glyptotermes_fuscus",] <- c(0, 1-0.2784785, 0.2784785)
-  
-  X[X[,1] == 1, ] <- 1
-  X <- X[,-1]
-  X[apply(X, 1, sum) == 0, ] <- 1
-  
-  labs <- rownames(X)[apply(X, 1, sum) == 3]
-  
-  
-  fit1 <- fitMk(tandem_tree, X, model="ARD", pi="fitzjohn",
-              lik.func="pruning", logscale=TRUE)
-  ace1 <- ancr(fit1,tips=TRUE)
-  plot(ace1,args.plotTree=list(direction="upwards"))
-  tips<-sapply(labs,function(x,y) which(y==x),y=tandem_tree$tip.label)
-  add.arrow(tandem_tree,tips,arrl=3,offset=2,lwd=2,
-            col=palette()[4])
-  
-  ordered_model<-matrix(c(
-    0,1,2,
-    3,0,4,
-    5,6,0),3,3,
-    byrow=TRUE,
-    dimnames=list(0:2,0:2))
-  ordered_model
-  fitER <- fitMk(tandem_tree, tandem, model="ER", pi="fitzjohn")
-  fitARD <- fitMk(tandem_tree, tandem, model="ARD", pi="fitzjohn")
-  
-  fit_aov <- anova(fitER, fitARD)
-  tandem_ancr<-ancr(fit_aov)
-  library(viridis)
-  cols = viridis(2)[1:2]
-  plot(tandem_ancr,args.nodelabels=list(piecol=cols),
-       args.tiplabels=list(piecol=cols),direction="upwards")
-  
-  fitER <- fitgammaMk(tandem_tree, tandem, rand_start=TRUE, model="ER")
-  fitARD <- fitgammaMk(tandem_tree, tandem, rand_start=TRUE, model="ARD")
-  
-  fithrmER<-fitHRM(tandem_tree,tandem,model="ER", parallel=T)
-  fithrmARD<-fitHRM(tandem_tree,tandem,model="ARD", parallel=T)
-  plot(fithrmARD, spacer=0.4, asp=0.5, offset=0.05, signif=4)
-  
-  cols = viridis(4)
-  anc_parity <- ancr(fithrmER,tips=TRUE)
-  plot(anc_parity,args.nodelabels=list(piecol=cols),
-       args.tiplabels=list(piecol=cols),direction="upwards")
-  
-  anc_parity <- ancr(fithrmARD, tips=TRUE)
-  plot(anc_parity,args.nodelabels=list(piecol=cols),
-       args.tiplabels=list(piecol=cols))
-  
-  
-  
-  
-  
-  
-  
-  cols = c(0,1)
-  labels <- tandem_tree$tip.label
-  tandem <- tandem[labels]
-  plotTree(tandem_tree, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(tandem,sort(unique(tandem))), piecol = cols, cex = 0.3)
-  
-  fitER <- ace(tandem, tandem_tree, model="ER", type="discrete")
-  fitARD <- ace(tandem, tandem_tree, model="ARD", type="discrete")
-  
-  AIC(fitER, k = 1)
-  AIC(fitARD, k = 2)
-  
-  nodelabels(node = 1:tandem_tree$Nnode+Ntip(tandem_tree),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  nodelabels(node = 1:tandem_tree$Nnode+Ntip(tandem_tree),
-             pie = fitARD$lik.anc, piecol = cols, cex=0.5)
-  
-  
-  library(corHMM)
-  rate.mat <- getRateCatMat(ntraits = 1, nstates = 2, nratecats = 2)
-  
-  # Fit the model
-  fit <- corHMM(tandem_tree, tandem, rate.cat = 2, node.states = "marginal")
-  
-  # Print results
-  print(fit)
-  
-  
-  
-  
-  tandem <- d_tandem$Leader
-  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  tandem[is.na(tandem)] <- "female"
-  
-  cols = 1:3
-  labels <- tree2$tip.label
-  tandem <- tandem[labels]
-  plotTree(tree2, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(tandem, sort(unique(tandem))), piecol = cols, cex = 0.3)
-  
-  fitER <- ace(tandem, tree2, model="ER", type="discrete")
-  nodelabels(node = 1:tree2$Nnode+Ntip(tree2),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  
-  
-  
-  tandem <- d_tandem$Female
-  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  tandem[is.na(tandem)] <- 1
-  
-  cols = 1:3
-  labels <- tree2$tip.label
-  tandem <- tandem[labels]
-  plotTree(tree2, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(tandem, sort(unique(tandem))), piecol = cols, cex = 0.3)
-  
-  fitER <- ace(tandem, tree2, model="ER", type="discrete")
-  nodelabels(node = 1:tree2$Nnode+Ntip(tree2),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  
-  
-  tandem <- d_tandem$Male
-  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  tandem[is.na(tandem)] <- 1
-  
-  cols = 1:3
-  labels <- tree2$tip.label
-  tandem <- tandem[labels]
-  plotTree(tree2, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(tandem, sort(unique(tandem))), piecol = cols, cex = 0.3)
-  
-  fitER <- ace(tandem, tree2, model="ER", type="discrete")
-  nodelabels(node = 1:tree2$Nnode+Ntip(tree2),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  
-  
-  Female <- d_tandem$Female.active
-  names(Female) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  tree3 <- drop.tip(tree2, names(Female)[is.na(Female)])
-  Female <- Female[!is.na(Female)]
-  Male <- d_tandem$Male.active
-  names(Male) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  Male <- Male[!is.na(Male)]
-  
-  #fit <- fitPagel(tree3, Male, Female)
-  
-  plot(fit)
-  
-  cols = 1:2
-  
-  labels <- tree3$tip.label
-  Female <- Female[labels]
-  Male <- Male[labels]
-  plotTree(tree3, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(Female, sort(unique(Female))), piecol = cols, cex = 0.3)
-  fitER <- ace(Female, tree3, model="ER", type="discrete")
-  nodelabels(node = 1:tree3$Nnode+Ntip(tree3),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  plotTree(tree3, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(Male, sort(unique(Male))), piecol = cols, cex = 0.3)
-  fitER <- ace(Male, tree3, model="ER", type="discrete")
-  nodelabels(node = 1:tree3$Nnode+Ntip(tree3),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  
-  
-  
-  
-  
-  tandem <- d_tandem$Leader
-  names(tandem) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  tandem[is.na(tandem)] <- "female"
-  
-  dtemp <- subset(d_tandem, Tandem == 1)
-  
-  d_tandem$
-  
-  
-  Female <- d_tandem$Female.active
-  Male <- d_tandem$Male.active
-  
-  Female[d_tandem$Tandem == 1]
-  Male[d_tandem$Tandem == 1]
-  
-  cols = 1:3
-  labels <- tree2$tip.label
-  tandem <- tandem[labels]
-  plotTree(tree2, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(tandem, sort(unique(tandem))), piecol = cols, cex = 0.3)
-  
-  fitER <- ace(tandem, tree2, model="ER", type="discrete")
-  nodelabels(node = 1:tree2$Nnode+Ntip(tree2),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  
-  
-  
-  
-  
-  
-  
-  Female <- d_tandem$Female.active
-  otus <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
-  names(Female) <- otus
-  tree3 <- drop.tip(tree2, names(Female)[is.na(Female) | d_tandem$Tandem == 0])
-  Female <- Female[!is.na(Female) & d_tandem$Tandem == 1]
-  Male <- d_tandem$Male.active
-  names(Male) <- otus
-  Male <- Male[!is.na(Male) & d_tandem$Tandem == 1]
-  
-  
-  cols = 1:2
-  
-  labels <- tree3$tip.label
-  Female <- Female[labels]
-  Male <- Male[labels]
-  plotTree(tree3, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(Female, sort(unique(Female))), piecol = cols, cex = 0.3)
-  fitER <- ace(Female, tree3, model="ER", type="discrete")
-  nodelabels(node = 1:tree3$Nnode+Ntip(tree3),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-  
-  plotTree(tree3, fsize=0.8, ftype="i")
-  tiplabels(pie = to.matrix(Male, sort(unique(Male))), piecol = cols, cex = 0.3)
-  fitER <- ace(Male, tree3, model="ER", type="discrete")
-  nodelabels(node = 1:tree3$Nnode+Ntip(tree3),
-             pie = fitER$lik.anc, piecol = cols, cex=0.5)
-
+  # plot tree
+  save_plot <- TRUE
+  {
+    plotTree(tandem_tree, fsize=0.5, ftype="i", offset=2 )
+    if(save_plot){
+      pdf("output/tree.pdf", width=5, height=6)
+      plotTree(tandem_tree, fsize=0.5, ftype="i", offset=2 )
+      dev.off()
+    }
+  }
 }
-
-
-
-tandem_tree2 <- drop.tip(tandem_tree,  d_tandem$label[ is.na(d_tandem$Leader) ])
-leader <- d_tandem$Leader[ !is.na(d_tandem$Leader) ]
-
-f_leader <- (leader == "female" | leader == "both")
-names(f_leader) <- d_tandem$label[ !is.na(d_tandem$Leader) ]
-
-fitER <- fitMk(tandem_tree2, f_leader, model="ER", pi="fitzjohn")
-fitARD <- fitMk(tandem_tree2, f_leader, model="ARD", pi="fitzjohn")
-
-fithrmER2<-fitHRM(tandem_tree2, f_leader,model="ER", parallel=T, ncat=c(1,2))
-fithrmARD2<-fitHRM(tandem_tree2, f_leader,model="ARD", parallel=T, ncat=c(1,2))
-
-fit_aov <- anova(fitER, fitARD, fithrmER2, fithrmARD2)
-
-cols = viridis(3)
-anc_parity <- ancr(fitARD,tips=TRUE)
-plot(anc_parity,args.nodelabels=list(piecol=cols),
-     args.tiplabels=list(piecol=cols))
-
-plot(fithrmARD2)
-
-
-m_leader <- (leader == "male" | leader == "both")
-names(m_leader) <- d_tandem$label[ !is.na(d_tandem$Leader) ]
-
-fitER <- fitMk(tandem_tree2, m_leader, model="ER", pi="fitzjohn")
-fitARD <- fitMk(tandem_tree2, m_leader, model="ARD", pi="fitzjohn")
-
-fithrmER2<-fitHRM(tandem_tree2, m_leader,model="ER", parallel=T, ncat=c(1,2))
-fithrmARD2<-fitHRM(tandem_tree2, m_leader,model="ARD", parallel=T, ncat=c(1,2))
-
-fit_aov <- anova(fitER, fitARD, fithrmER2, fithrmARD2)
-
-cols = viridis(3)
-anc_parity <- ancr(fitARD,tips=TRUE)
-plot(anc_parity,args.nodelabels=list(piecol=cols),
-     args.tiplabels=list(piecol=cols))
-
-plot(fithrmARD2)
-
+  
