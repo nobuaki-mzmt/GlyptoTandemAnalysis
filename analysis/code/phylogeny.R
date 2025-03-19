@@ -1,5 +1,4 @@
 # Pylogenetic analysis
-
 {
   options(warn = 0)
   
@@ -19,7 +18,6 @@
 {
   # tree data
   {
-    #tree.file <- "data_raw/tree/run1_burn20_mcc_median.tree"
     tree.file <- "data_raw/tree/run5_400M_burnin20_mcc_median.tree"
     
     tree <- read.nexus(tree.file)
@@ -27,6 +25,9 @@
     labels <- str_replace(labels, "Cubi_tenu", "Cubitermes_tenuiceps")
     labels <- str_replace(labels, "Tern_pall", "Ternicubitermes_pall")
     labels <- str_replace(labels, "Tern_pall", "Ternicubitermes_pall")
+    # as for Anacanthotermes, the tree is from sp. 
+    # The mating system information is available for macrocephalus, so we use macrocephalus for reconstruction.
+    labels <- str_replace(labels, "Anacanthotermes_sp", "Anacanthotermes_macrocephalus")
   }
 
   # tandem data (remove some taxa without phylogeny information)
@@ -49,7 +50,7 @@
     d_tandem <- d_tandem[d_tandem$Species != "edentatus",]
     d_tandem <- d_tandem[d_tandem$Species != "suspensus",]
     d_tandem <- d_tandem[d_tandem$Species != "bequarerti",]
-    d_tandem <- d_tandem[d_tandem$Species != "macrocephalus",]
+    d_tandem <- d_tandem[d_tandem$Species != "ochraceus",]
     d_tandem <- d_tandem[d_tandem$Species != "wheeleri",]
     d_tandem <- d_tandem[d_tandem$Species != "atlanticus",]
   }
@@ -118,51 +119,99 @@
                         ncat=c(2,2,2,2), parallel=TRUE, ncores=20, niter=20)
     
     anova(fitARD, fitER, fitSYM, fithrmER1, fithrmER2)
-      
+    plot(fithrmER1)
+    
     ace1 <- ancr(fithrmER1, tips=TRUE)
     
+    # plot
     leader_col   <- c("gray50", "#9370DB", "#D55E00", "#F63C00", "#009E73")
-    
-    
     plot(ace1, args.nodelabels=list(piecol=leader_col))
     if(save_plot){
-      pdf("output/leader_ase.pdf", width=5, height=6)
+      pdf("output/leader_ase.pdf", width=6, height=8)
       plot(ace1, args.nodelabels=list(piecol=leader_col))
       dev.off()
     }
+    
+    # ancestral state data
+    save(ace1, file = "data_fmt/ace_tandem.rda")
+    load("data_fmt/ace_tandem.rda")
+    plot(tandem_tree)
+    nodelabels() 
+    round(ace1$ace, 2)
+    
+    # Kalotermitidae
+    #0 both female female* male
+    #0.32 0.28   0.29    0.00 0.11
+    
+    # Glyptotermes
+    #0.38 0.42   0.11    0.00 0.08
+    
+    # G. nakajimai
+    #0.93 0.04   0.02    0.00 0.02
+    
   }  
   
   # Ancestral state reconstruction of mate system
   {
     # incipient
-    valid_tips <- names(incipient[!is.na(incipient)])
-    pruned_tree <- drop.tip(tandem_tree, setdiff(tandem_tree$tip.label, valid_tips))
-    incipient_pruned <- incipient[valid_tips]
-    
-    fitARD <- fitMk(pruned_tree, incipient_pruned, model="ARD", pi="fitzjohn")
-    fitER  <- fitMk(pruned_tree, incipient_pruned, model="ER" , pi="fitzjohn")
-    fitSYM <- fitMk(pruned_tree, incipient_pruned, model="SYM", pi="fitzjohn")
-    
-    anova(fitARD, fitER, fitSYM)
-    
-    ace1 <- ancr(fitER, tips=TRUE)
-    
-    plot(ace1, args.nodelabels=list(piecol=viridis(3)))
-    
+    {
+      valid_tips <- names(incipient[!is.na(incipient)])
+      pruned_tree <- drop.tip(tandem_tree, setdiff(tandem_tree$tip.label, valid_tips))
+      incipient_pruned <- incipient[valid_tips]
+      
+      fitARD <- fitMk(pruned_tree, incipient_pruned, model="ARD", pi="fitzjohn")
+      fitER  <- fitMk(pruned_tree, incipient_pruned, model="ER" , pi="fitzjohn")
+      fitSYM <- fitMk(pruned_tree, incipient_pruned, model="SYM", pi="fitzjohn")
+      
+      anova(fitARD, fitER, fitSYM)
+      
+      ace1 <- ancr(fitER, tips=TRUE)
+      
+      plot(ace1, args.nodelabels=list(piecol=viridis(3)))
+      
+      # get value
+      plot(pruned_tree)
+      nodelabels() 
+      round(ace1$ace, 2)
+      
+      # Kalotermitidae
+      # 1 0 0
+      
+      # Glyptotermes
+      # 1 0 0 
+    }
+
     # mature
-    valid_tips <- names(mature[!is.na(mature)])
-    pruned_tree <- drop.tip(tandem_tree, setdiff(tandem_tree$tip.label, valid_tips))
-    mature_pruned <- mature[valid_tips]
+    {
+      valid_tips <- names(mature[!is.na(mature)])
+      pruned_tree <- drop.tip(tandem_tree, setdiff(tandem_tree$tip.label, valid_tips))
+      mature_pruned <- mature[valid_tips]
+      
+      fitARD <- fitMk(pruned_tree, mature_pruned, model="ARD", pi="fitzjohn")
+      fitER  <- fitMk(pruned_tree, mature_pruned, model="ER" , pi="fitzjohn")
+      fitSYM <- fitMk(pruned_tree, mature_pruned, model="SYM", pi="fitzjohn")
+      
+      anova(fitARD, fitER, fitSYM)
+      
+      ace1 <- ancr(fitER, tips=TRUE)
+      
+      plot(ace1, args.nodelabels=list(piecol=viridis(3)))
+      
+      # get value
+      plot(pruned_tree)
+      nodelabels() 
+      round(ace1$ace, 2)
+      
+      # Kalotermitidae
+      # 0.99 0 0.01
+      
+      # Glyptotermes
+      # 0.03 0 0.97
+      
+      # G. nakajimai
+      # 0 0 1
+    }
     
-    fitARD <- fitMk(pruned_tree, mature_pruned, model="ARD", pi="fitzjohn")
-    fitER  <- fitMk(pruned_tree, mature_pruned, model="ER" , pi="fitzjohn")
-    fitSYM <- fitMk(pruned_tree, mature_pruned, model="SYM", pi="fitzjohn")
-    
-    anova(fitARD, fitER, fitSYM)
-    
-    ace1 <- ancr(fitER, tips=TRUE)
-    
-    plot(ace1, args.nodelabels=list(piecol=viridis(3)))
     
   }  
   
@@ -175,10 +224,10 @@
     is_tip <- tandem_tree$edge[,2] <= length(tandem_tree$tip.label)
     ordered_tips <- tandem_tree$edge[is_tip, 2]
     ordered_tips_label <- tandem_tree$tip.label[ordered_tips]
-    ordered_leader    <- as.numeric(rev(leader[ordered_tips.label]))
-    ordered_incipient <- as.numeric(rev(incipient[ordered_tips.label]))
-    ordered_mature    <- as.numeric(rev(mature[ordered_tips.label]))
-    ordered_partheno  <- as.numeric(rev(partheno[ordered_tips.label]))
+    ordered_leader    <- as.numeric(rev(leader[ordered_tips_label]))
+    ordered_incipient <- as.numeric(rev(incipient[ordered_tips_label]))
+    ordered_mature    <- as.numeric(rev(mature[ordered_tips_label]))
+    ordered_partheno  <- as.numeric(rev(partheno[ordered_tips_label]))
     
     cols = viridis(4, end=0.5, alpha=0.5)
     col.show <- alpha(c(cols, "white"), 0.5)
