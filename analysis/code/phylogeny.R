@@ -1,6 +1,7 @@
 # Pylogenetic analysis
 {
   options(warn = 0)
+  rm(list = ls())
   
   library(dplyr)
   
@@ -100,6 +101,17 @@
   }
 }
 # ---------------------------------------------------------------------------- #
+
+# ---------------------------------------------------------------------------- #
+# dependence between female and male leaders
+# ---------------------------------------------------------------------------- #
+{
+  female_leader <- leader == "female" | leader == "both"
+  male_leader   <- leader == "male"   | leader == "both"
+  names(female_leader) = names(male_leader) <- names(leader)
+  res <- fitPagel(tandem_tree, female_leader, male_leader)
+  res
+}
 
 # ---------------------------------------------------------------------------- #
 # plot / analysis
