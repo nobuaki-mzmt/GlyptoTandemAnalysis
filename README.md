@@ -1,8 +1,8 @@
 # README
 ## Article Information
 This repository provides access to the data and source code used for the manuscript    
-### **Loss of pair formation predates the evolution of male-less society in Glyptotermes termites.**  
-#### **Nobuaki Mizumoto, Simon Hellemans**  
+### **Loss of pair formation predates the evolution of male-less society in termites.**  
+#### **Nobuaki Mizumoto, Toshihisa Yashiro, Simon Hellemans**  
 
 ## Table of Contents
 This repository includes tracking data, R codes to analyze it, and Python code for video analysis.  

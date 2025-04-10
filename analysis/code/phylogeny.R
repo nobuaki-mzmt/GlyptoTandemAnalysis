@@ -1,4 +1,7 @@
-# Pylogenetic analysis
+# Pylogenetic comparative analysis
+# plot all results + stats
+# N Mizumoto
+
 {
   options(warn = 0)
   rm(list = ls())
@@ -94,8 +97,10 @@
   # get vector for ace
   {
     leader <- as.factor(d_tandem$Leader2)
-    incipient <- as.factor(d_tandem$Incipient)
-    mature <- as.factor(d_tandem$Mature)
+    incipient <- as.factor(str_replace(d_tandem$Incipient, "monogamous/multiple", "multiple"))
+    mature <- as.factor(str_replace(d_tandem$Mature, "monogamous/multiple", "multiple"))
+    
+    
     
     names(leader) = names(incipient) = names(mature) <- paste(d_tandem$Genus, d_tandem$Species, sep="_")
   }
@@ -112,6 +117,7 @@
   res <- fitPagel(tandem_tree, female_leader, male_leader)
   res
 }
+# ---------------------------------------------------------------------------- #
 
 # ---------------------------------------------------------------------------- #
 # plot / analysis
@@ -173,26 +179,25 @@
       
       fitARD <- fitMk(pruned_tree, incipient_pruned, model="ARD", pi="fitzjohn")
       fitER  <- fitMk(pruned_tree, incipient_pruned, model="ER" , pi="fitzjohn")
-      fitSYM <- fitMk(pruned_tree, incipient_pruned, model="SYM", pi="fitzjohn")
+      #fitSYM <- fitMk(pruned_tree, incipient_pruned, model="SYM", pi="fitzjohn")
       
-      anova(fitARD, fitER, fitSYM)
+      anova(fitARD, fitER)
       
-      ace1 <- ancr(fitER, tips=TRUE)
+      ace1 <- ancr(fitARD, tips=TRUE)
       
-      plot(ace1, args.nodelabels=list(piecol=viridis(3)))
+      plot(ace1, args.nodelabels=list(piecol=viridis(2, direction = -1)))
       
       # get value
       plot(pruned_tree)
       nodelabels() 
-      round(ace1$ace, 2)
       
       # Kalotermitidae
-      # 1 0 0
+      round(ace1$ace, 2)[46]
       
       # Glyptotermes
-      # 1 0 0 
+      round(ace1$ace, 2)[51]
+      
     }
-
     # mature
     {
       valid_tips <- names(mature[!is.na(mature)])
@@ -201,9 +206,9 @@
       
       fitARD <- fitMk(pruned_tree, mature_pruned, model="ARD", pi="fitzjohn")
       fitER  <- fitMk(pruned_tree, mature_pruned, model="ER" , pi="fitzjohn")
-      fitSYM <- fitMk(pruned_tree, mature_pruned, model="SYM", pi="fitzjohn")
+      #fitSYM <- fitMk(pruned_tree, mature_pruned, model="SYM", pi="fitzjohn")
       
-      anova(fitARD, fitER, fitSYM)
+      anova(fitARD, fitER)
       
       ace1 <- ancr(fitER, tips=TRUE)
       
@@ -215,13 +220,14 @@
       round(ace1$ace, 2)
       
       # Kalotermitidae
-      # 0.99 0 0.01
+      round(ace1$ace, 2)[52]
       
       # Glyptotermes
-      # 0.03 0 0.97
+      round(ace1$ace, 2)[57]
       
       # G. nakajimai
-      # 0 0 1
+      round(ace1$ace, 2)[59]
+      
     }
     
     
@@ -274,4 +280,4 @@
     }
   }
 }
-  
+# ---------------------------------------------------------------------------- #

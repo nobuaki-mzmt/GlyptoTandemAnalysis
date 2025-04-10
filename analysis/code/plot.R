@@ -1,10 +1,13 @@
 # Glyptotermes tandem
+# plot all results + stats
 # N Mizumoto
+
 {
   rm(list = ls())
   
   library(arrow)
   library(stringr)
+  library(data.table)
   
   library(dplyr)
   library(tidyr)
@@ -717,3 +720,83 @@
   }
 }
 # ---------------------------------------------------------------------------- #
+
+# ---------------------------------------------------------------------------- #
+# breeding structure
+# ---------------------------------------------------------------------------- #
+{
+  df <- fread("data_raw/Glyptotermes_reproductive_number.csv")
+  df$species <- factor(df$species, levels = c("satsumensis", "fuscus", "nakajimai_sex", "nakajimai_asex"))
+  # show some stats
+  
+  # data count
+  table(df[, c("species", "development")])
+  # data lacking primary reproductives
+  subset(df, p_total < 2)
+  
+  #
+  df_stat <- subset(df, p_total > 1)
+  
+  df_stat$monogamous <- df_stat$p_total == 2
+  
+  df_summary <- df_stat %>%
+    group_by(species, development, monogamous) %>%
+    summarise(count = n()) %>%
+    group_by(species, development) %>%
+    mutate(prop = count / sum(count), total = sum(count))
+  
+  ggplot(df_summary, aes(x = interaction(development, species), y = prop, fill = factor(monogamous))) +
+    geom_bar(stat = "identity", position = "stack", alpha = 0.75, width = 0.5) +
+    ylab("Proportion Monogamous") +
+    theme_classic() +
+    scale_y_continuous(breaks = c(0,0.5,1), labels = c(0,0.5,1)) +
+    scale_fill_viridis(discrete = T) +
+    theme(legend.position = "none", aspect.ratio = 0.75) +
+    xlab("")
+  ggsave("output/mate_type_glypto.pdf", width = 3, height = 2)
+  
+  
+  
+  #ggplot(subset(df_stat, development == "mature"), 
+  ggplot(df_stat, 
+         aes(x = fct_rev(species), y = p_total,  col = development)) + 
+    #geom_dotplot(binaxis = "y", stackdir = "center", dotsize = 0.5) +
+    geom_jitter(width = 0.075, height = 0, alpha = 0.75, size = 0.5)+
+    scale_color_viridis(discrete = T, end = 0.5, direction = -1) +
+    theme_classic() +
+    coord_flip() +
+    scale_y_log10(breaks = c(2, 5, 10, 20, 50))+
+    labs(x = "", y = "") +
+    theme(legend.position = "none", aspect.ratio = 1.8, axis.text.y = element_blank())
+  ggsave("output/num_repro_glypto.pdf", width = 2.5, height = 3)
+  
+  
+  # comp species 
+  r <- glm(p_total ~ species, family = "poisson",
+           data = subset(df_stat, development == "incipient"))
+  Anova(r)
+  multicomparison<-glht(r, linfct = mcp(species = "Tukey"))
+  summary(multicomparison)
+  
+  r <- glm(p_total ~ species, family = "poisson",
+           data = subset(df_stat, development == "mature"))
+  Anova(r)
+  multicomparison<-glht(r, linfct = mcp(species = "Tukey"))
+  summary(multicomparison)
+  
+  # comp incipient vs mature for each species
+  r <- glm(p_total ~ development, family = "poisson",
+           data = subset(df_stat, species == "nakajimai_asex"))
+  Anova(r)
+  
+  r <- glm(p_total ~ development, family = "poisson",
+           data = subset(df_stat, species == "satsumensis"))
+  Anova(r)
+  
+  r <- glm(p_total ~ development, family = "poisson",
+           data = subset(df_stat, species == "fuscus"))
+  Anova(r)
+  
+}
+# ---------------------------------------------------------------------------- #
+

@@ -2,7 +2,6 @@
 data_preparation.py
 N. Mizumoto
 This script reads all .h5 results from SLEAP and organize for the further analysis
-Gly sat
 0: Head 1: Pronotum 2: Tip 3: AntennaR 4: AntennaL 5: BodyCenter 6: Marker
 """
 
