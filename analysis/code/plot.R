@@ -4,6 +4,7 @@
 
 {
   rm(list = ls())
+  options(warn = 0)
   
   library(arrow)
   library(stringr)
@@ -782,6 +783,7 @@
            data = subset(df_stat, development == "mature"))
   Anova(r)
   multicomparison<-glht(r, linfct = mcp(species = "Tukey"))
+  
   summary(multicomparison)
   
   # comp incipient vs mature for each species
