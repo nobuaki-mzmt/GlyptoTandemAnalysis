@@ -31,8 +31,10 @@ The scripts of this project is written in R and Python, tested on Windows 11 (64
 ### R Session Info
 R version R version 4.4.1 (2024-06-14 ucrt)
 Reproducing R Environment
+scales, phytools, maps, ape, multcomp, TH.data, MASS, mvtnorm, lme4, Matrix, coxme, bdsmatrix, car, carData, survminer, ggpubr, survival, CircMLE, NPCirc, circular, ggridges, viridis, viridisLite, ggplot2, forcats, tidyr, dplyr, data.table, stringr, arrow
 ```r
-packages <- c(scales="1.3.0", phytools="2.4-4", maps="3.4.2.1", ape="5.8-1", multcomp="1.4-28", TH.data="1.1-3", MASS="7.3-60.2", mvtnorm="1.3-3", lme4="1.1-36", Matrix="1.7-0", coxme="2.2-22", bdsmatrix="1.3-7", car="3.1-3", carData="3.0-5", survminer="0.5.0", ggpubr="0.6.0", survival="3.6-4", CircMLE="0.3.0", NPCirc="3.1.1", circular="0.5-1", ggridges="0.5.6", viridis="0.6.5", viridisLite="0.4.2", ggplot2="3.5.1", forcats="1.0.0", tidyr="1.3.1", dplyr="1.1.4", data.table="1.17.0", stringr="1.5.1", arrow="19.0.1"); for (pkg in names(packages)) remotes::install_version(pkg, version = packages[pkg])
+packages <- c(scales="1.3.0", phytools="2.4-4", maps="3.4.2.1", ape="5.8-1", multcomp="1.4-28", TH.data="1.1-3", MASS="7.3-60.2", mvtnorm="1.3-3", lme4="1.1-36", Matrix="1.7-0", coxme="2.2-22", bdsmatrix="1.3-7", car="3.1-3", carData="3.0-5", survminer="0.5.0", ggpubr="0.6.0", survival="3.6-4", CircMLE="0.3.0", NPCirc="3.1.1", circular="0.5-1", ggridges="0.5.6", viridis="0.6.5", viridisLite="0.4.2", ggplot2="3.5.1", forcats="1.0.0", tidyr="1.3.1", dplyr="1.1.4", data.table="1.17.0", stringr="1.5.1", arrow="19.0.1")
+for (pkg in names(packages)) remotes::install_version(pkg, version = packages[pkg])
 ```
 
 ### Python Environment
