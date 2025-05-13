@@ -5,11 +5,11 @@ This repository provides access to the data and source code used for the manuscr
 **Nobuaki Mizumoto, Toshihisa Yashiro, Simon Hellemans**  
 **Paper DOI:** [TBA](XXX)
 
-This study investigates the tandem running behavior of three _Glyptotermes_ termite species, including _G. nakajimai_ (both sexual and asexual populations), _G. fuscus_, _G. satsumensis_. The videos were analyed using the deep-learning posture tracking software, [SLEAP](https://sleap.ai), to quantify tandem running behavior and compare it across species. Also, this study performs the phylogenetic comparative analysis of tandem running behavior and mating systems across the whole termite diversity.
+This study investigates the tandem running behavior of three _Glyptotermes_ termite species, including _G. nakajimai_ (both sexual and asexual populations), _G. fuscus_, _G. satsumensis_. The videos were analyzed using the deep-learning posture tracking software, [SLEAP](https://sleap.ai), to quantify tandem running behavior and compare it across species. Also, this study performs phylogenetic comparative analyses of tandem running behavior and mating systems across the whole termite diversity.
 This repository includes data and the Python/R scripts.  
-Additional data avaiable elsewhere includes, 
-- The models and labels are available at TBA.
-- GeneBank sequences
+Additional data available elsewhere includes, 
+- The models for SLEAP are available at TBA.
+- GeneBank sequences.
 
 ## Table of Contents
 This repository includes tracking data, R codes to analyze it, and Python code for video analysis.  
