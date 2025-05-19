@@ -144,11 +144,28 @@
     # plot
     leader_col   <- c("gray50", "#9370DB", "#D55E00", "#F63C00", "#009E73")
     plot(ace1, args.nodelabels=list(piecol=leader_col))
+    
     if(save_plot){
       pdf("output/leader_ase.pdf", width=6, height=8)
       plot(ace1, args.nodelabels=list(piecol=leader_col))
+      tree_depth <- max(branching.times(tandem_tree))
+      axis(1, at=seq(0, tree_depth, length.out=5), labels=round(seq(0, tree_depth, length.out=5), 2))
+      title(xlab = "Time before present")
+      
+      coords <- get("last_plot.phylo", envir = .PlotPhyloEnv)
+      x_node <- coords$xx[117]
+      y_node <- coords$yy[117]
+      ci_min <- 129.3174 - 8.79
+      ci_max <- 129.3174 - 21.19
+      segments(x0 = ci_min, x1 = ci_max, y0 = y_node, y1 = y_node, lwd = 2, col = "blue")
+      segments(x0 = ci_min, x1 = ci_min, y0 = y_node - 0.2, y1 = y_node + 0.2, col = "red")
+      segments(x0 = ci_max, x1 = ci_max, y0 = y_node - 0.2, y1 = y_node + 0.2, col = "red")
+      
       dev.off()
     }
+    
+    max(branching.times(tandem_tree))
+    
     
     # ancestral state data
     save(ace1, file = "data_fmt/ace_tandem.rda")
