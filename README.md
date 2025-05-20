@@ -9,7 +9,7 @@ This study investigates the tandem running behavior of three _Glyptotermes_ term
 This repository includes data and the Python/R scripts.  
 Additional data available elsewhere includes, 
 - The models for SLEAP are available at TBA.
-- GeneBank sequences.
+- GenBank sequences.
 
 ## Table of Contents
 This repository includes tracking data, R codes to analyze it, and Python code for video analysis.  
